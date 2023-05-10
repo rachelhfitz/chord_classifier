@@ -7,8 +7,8 @@ import os
 
 def calculate_node_position(label):
     if label == "silence":
-        return [0, -1]
-    note, octave, chord_type = split_label(label)
+        return [5, -1]
+    note, chord_type = split_label(label)
 
     note_offset = {
         "C": 0,
@@ -25,7 +25,7 @@ def calculate_node_position(label):
         "B": 11,
     }
 
-    x = ((int(octave) - 4) * len(notes) + note_offset[note]) * 2
+    x = (len(notes) + note_offset[note])
     y = 1 if chord_type == "major" else 0
     return [x,y]
 
@@ -39,7 +39,7 @@ def get_edge_colour(l1, l2):
         return "red"
 
 
-def generate_missclassification_graph(actual_labels, predicted_labels, feature_type, model_type, accuracy):
+def generate_missclassification_graph(actual_labels, predicted_labels, feature_type, model_type, accuracy, plots_folder):
     G = nx.DiGraph()
 
     all_labels = get_all_labels()
@@ -75,22 +75,19 @@ def generate_missclassification_graph(actual_labels, predicted_labels, feature_t
     plt.title(f"Accuracy: {accuracy}", fontsize=5)
     nx.draw(G, pos, labels=labels, with_labels=True, node_size=150, font_size=3, width=edge_weights, edge_color=edge_colours, arrowsize=7)
     
-    path = f"plots/misclassification_graphs"
+    path = f"{plots_folder}/misclassification_graphs"
     if not os.path.isdir(path):
         os.makedirs(path)
     plt.savefig(f"{path}/{feature_type}-{model_type}.png", format="PNG", dpi=1000)
     plt.clf()
 
-def make_accuracy_heatmap(accuracies):
+def make_accuracy_heatmap(accuracies, plots_folder):
     ax = plt.axes()
     sns.heatmap(accuracies, annot=True, annot_kws={"size": 8}, yticklabels=model_types, xticklabels=feature_types, cmap=sns.cm.rocket_r)
     ax.set_title("Model Accuracy")
     plt.yticks(rotation=0, fontsize=8)
     plt.xticks(rotation=45, fontsize=8)
-    path = "plots"
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    plt.savefig(f"{path}/accuracy_heatmap.png", format="PNG", dpi=1000)
+    plt.savefig(f"{plots_folder}/accuracy_heatmap.png", format="PNG", dpi=1000)
     plt.clf()
 
 def tally_misclassification_types(actual_labels, predicted_labels):
@@ -111,7 +108,7 @@ def tally_misclassification_types(actual_labels, predicted_labels):
                 exit()
     return num_related, num_unrelated, num_silence
 
-def make_misclassification_bar_graph(model_types, feature_types, related_vals, unrelated_vals, silence_vals):
+def make_misclassification_bar_graph(model_types, feature_types, related_vals, unrelated_vals, silence_vals, plots_folder):
     fig, axs = plt.subplots(len(model_types), 1)
     plt.xticks(fontsize=6, rotation=30)
     for model_idx, model_type in enumerate(model_types):
@@ -121,8 +118,5 @@ def make_misclassification_bar_graph(model_types, feature_types, related_vals, u
         axs[model_idx].set_ylabel(model_type)
     fig.suptitle("Misclassification Types")
     plt.legend()
-    path = "plots"
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    plt.savefig(f"{path}/misclassification_bar_plot.png", format="PNG", dpi=1000)
+    plt.savefig(f"{plots_folder}/misclassification_bar_plot.png", format="PNG", dpi=1000)
     plt.clf()

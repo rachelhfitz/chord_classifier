@@ -30,7 +30,6 @@ num_obs = int(num_observations)
 files = os.listdir(obs_folder)
 
 if args.select_classes == "true":
-    octaves = present_options(octaves)
     notes = present_options(notes)
     chord_types = present_options(chord_types)
     record_silence = input("Do you want to add silent observations?  (\"yes\", \"no\")\n") == "yes"
@@ -56,15 +55,13 @@ def record_data(label, message):
         time.sleep(1)
         counter += 1
 
-# note: octaves are from C to C. C4 is middle C
 print("========  Collecting Data  ========")
 time.sleep(2)
-for octave in octaves:
-    for note in notes:
-        for chord_type in chord_types:
-            label = f"{note}-{octave}-{chord_type}"
-            message = f"Play {note}{octave} {chord_type}"
-            record_data(label, message)
+for note in notes:
+    for chord_type in chord_types:
+        label = f"{note}-{chord_type}"
+        message = f"Play {note} {chord_type}"
+        record_data(label, message)
 
 if record_silence:
     label = "silence"

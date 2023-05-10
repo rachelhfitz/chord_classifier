@@ -1,14 +1,13 @@
 from scipy.fftpack import rfft
 import numpy as np
-import pickle
 from constants import *
+import librosa
 
 def get_all_labels():
     labels = []
-    for octave in octaves:
-        for note in notes:
-            for chord_type in chord_types:
-                labels.append(f"{note}-{octave}-{chord_type}")
+    for note in notes:
+        for chord_type in chord_types:
+            labels.append(f"{note}-{chord_type}")
     labels.append("silence")
     return labels
 
@@ -36,18 +35,15 @@ def fourier_transform(data):
     return np.abs(rfft(data))
 
 
-def get_features(vector, feature_type, model_folder):
-    normalised_vector = normalise_pcm(vector)
-    frequency_spectrum = fourier_transform(normalised_vector)
+def get_features(vector, feature_type):
+    frequency_spectrum = fourier_transform(vector)
+    chromagram = librosa.feature.chroma_stft(y=vector, sr=fs)
+    chroma_mean = np.mean(chromagram, axis=1)
 
     if feature_type == "frequency":
         return frequency_spectrum
-    elif feature_type == "pcm":
-        return normalised_vector
-    elif feature_type == "pca":
-        with open(f"{model_folder}/pca/pca_class.pkl", 'rb') as f:
-            pca = pickle.load(f)
-        return pca.transform([frequency_spectrum])[0]
+    elif feature_type == "chroma":
+        return chroma_mean
     else:
         print(f"I don't know how to calculate {feature_type} features")
         exit()
@@ -57,19 +53,26 @@ def get_features(vector, feature_type, model_folder):
 def get_short_label(full_label):
     if full_label == "silence":
         return "S"
-    note, octave, chord_type = split_label(full_label)
+    note, chord_type = split_label(full_label)
     quality = "M" if chord_type == "major" else "m"
-    return f"{note}{octave}{quality}"
+    return f"{note} {quality}"
 
 def split_label(label):
     components = label.split('-')
     note = components[0]
-    octave = components[1]
-    chord_type = components[2]
-    return note, octave, chord_type
+    chord_type = components[1]
+    return note, chord_type
 
-def get_note_num_semitones_above(note, octave, num_semitones):
-    oct = int(octave)
+# broken
+def get_note_num_semitones_above(note, num_semitones):
+    note_idx = 0
+    for n in notes:
+        if n == note:
+            break
+        note_idx += 1
+    new_note_idx = (note_idx + num_semitones) % len(notes)
+    return notes[new_note_idx]
+    """ oct = int(octave)
     for ind, n in enumerate(notes):
         if n == note:
             break
@@ -80,27 +83,25 @@ def get_note_num_semitones_above(note, octave, num_semitones):
             ind = ind % len(notes)
             if not str(oct) in octaves: # we've gone out of range
                 return (None, None)
-    return (notes[ind], str(oct))
+    return (notes[ind], str(oct)) """
 
-
+# May be broken
 # given 2 chord labels, returns true if chords share 2 or more notes
 def chords_are_related(l1, l2):
     if l1 == "silence" or l2 == "silence":
         return False
     if l1 == l2:
-        return True
-    l1_note, l1_octave, l1_chord_type = split_label(l1)
-    l2_note, l2_octave, l2_chord_type = split_label(l2)
-    if l1_note == l2_note and l1_octave == l2_octave:
+        return True # these chords are the same
+    l1_note, l1_chord_type = split_label(l1)
+    l2_note, l2_chord_type = split_label(l2)
+    if l1_note == l2_note:
         return True  # these are parallel major/minor chords
-    if l1_chord_type == "major":
-        if (l2_note, l2_octave) == get_note_num_semitones_above(l1_note, l1_octave, 4) or (l1_note, l1_octave) == get_note_num_semitones_above(l2_note, l2_octave, 3):
-            # l2 is a major 3rd above l1 or l1 is a minor 3rd above l2
-            return True
-    elif l1_chord_type == "minor":
-        if (l1_note, l1_octave) == get_note_num_semitones_above(l2_note, l2_octave, 4) or (l2_note, l2_octave) == get_note_num_semitones_above(l1_note, l1_octave, 3):
-            # l1 is a major 3rd above l2 or l2 is a minor 3rd above l1
-            return True
+    if l1_chord_type == "major" and l2_chord_type == "minor":
+        if l2_note == get_note_num_semitones_above(l1_note, 4) or l1_note == get_note_num_semitones_above(l2_note, 3):
+            return True # these are relative major/minor
+    elif l1_chord_type == "minor" and l2_chord_type == "major":
+        if l1_note == get_note_num_semitones_above(l2_note, 4) or l2_note == get_note_num_semitones_above(l1_note, 3):
+            return True # these are relative major/minor
     else:
         return False
 

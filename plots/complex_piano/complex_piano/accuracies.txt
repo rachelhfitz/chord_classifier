@@ -1,0 +1,10 @@
+=================  Feature type:  frequency  ================
+bayes     14%    time: 17 seconds
+lda     7%    time: 11 seconds
+svm     29%    time: 19 seconds
+tree     17%    time: 10 seconds
+=================  Feature type:  chroma  ================
+bayes     30%    time: 13 seconds
+lda     46%    time: 10 seconds
+svm     41%    time: 11 seconds
+tree     23%    time: 10 seconds

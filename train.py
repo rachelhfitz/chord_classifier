@@ -5,7 +5,7 @@ import argparse
 import pickle
 from sklearn.decomposition import PCA
 from constants import *
-from helpers import present_options, normalise_pcm, fourier_transform
+from helpers import present_options, get_features
 
 
 ######################################    Parse arguments    ######################################
@@ -46,8 +46,8 @@ if args.select_models == "true":
 
 print(f"Collecting data from {obs_folder}")
     
-pcms = []
 frequencies = []
+chromas = []
 labels = []
 
 files = []
@@ -61,20 +61,9 @@ for f in files:
     fs, data = wavfile.read(f)
     for chunk_num in range(int(len(data) / chunk_samples)):
         data_chunk = data[chunk_num * chunk_samples : (chunk_num + 1) * chunk_samples - 1]
-
-        ch1_normalised = normalise_pcm(data_chunk)
-        fourier_spectrum = fourier_transform(ch1_normalised)
-        
-        pcms.append(ch1_normalised)
-        frequencies.append(fourier_spectrum)
-
+        frequencies.append(get_features(data_chunk, "frequency"))
+        chromas.append(get_features(data_chunk, "chroma"))
         labels.append(label)
-
-pca = PCA(n_components = 5)
-pca.fit(frequencies)
-pca_features = pca.transform(frequencies)
-with open(f"{model_folder}/pca/pca_class.pkl", 'wb') as f:
-    pickle.dump(pca, f)
 
 
 ######################################    Train models    ######################################
@@ -83,23 +72,18 @@ print(f"Training models into {model_folder}:")
 
 model_classes = {
     "bayes": naive_bayes.GaussianNB(),
-    "knn2": neighbors.KNeighborsClassifier(2),
-    "knn5": neighbors.KNeighborsClassifier(5),
-    "knn10": neighbors.KNeighborsClassifier(10),
-    "knn20": neighbors.KNeighborsClassifier(20),
-    "knn40": neighbors.KNeighborsClassifier(40),
     "lda": discriminant_analysis.LinearDiscriminantAnalysis(),
     "svm": svm.SVC(),
     "tree": tree.DecisionTreeClassifier()
 }
 features = {
     "frequency": frequencies,
-    "pcm": pcms,
-    "pca": pca_features,
+    "chroma": chromas,
 }
 
 for feature_type in feature_types:
     print(f"=======  Training models with {feature_type} features  =======")
+    
     for model_type in model_types:
         clf = model_classes[model_type]
         clf.fit(features[feature_type], labels)

@@ -42,7 +42,7 @@ while True:
     #print(f"Time to get frame: {after_get_frame - before_get_frame}")
     model_predictions = []
     for model, feature_type in zip(models, feature_types):
-        features = get_features(frame, feature_type, model_folder)
+        features = get_features(frame, feature_type)
         model_predictions.append(model.predict([features])[0])
 
     previous_chunk_predictions[cnt] = get_most_common_in_list(model_predictions)
